@@ -29,7 +29,7 @@
         .png-btn { background-color: var(--info-color); } .png-btn:hover { background-color: #138496; }
         input[type="file"] { display: none; }
         .hidden { display: none; }
-        .summaries-wrapper { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 25px; align-items: flex-start; }
+        .summaries-wrapper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; align-items: flex-start; }
         .summary-box { background-color: var(--card-bg-color); padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; height: 60vh; }
         .summary-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; }
         .summary-header h2 { margin: 0; font-weight: 500; }
@@ -83,7 +83,7 @@
     <div class="main-container">
         <div class="upload-card">
             <!-- <<<----- 2. แก้ไขหัวข้อของเว็บ ----- >>> -->
-            <h1>WithAdays ใบยืนยันยอด</h1>
+            <h1>WithADays ใบยืนยันยอด</h1>
             <div id="print-test-display" class="hidden"></div>
             <div class="action-buttons">
                 <label for="fileUpload" class="action-btn upload-button">เลือกไฟล์ Excel</label>
@@ -101,15 +101,15 @@
 
         // <<<----- 3. แก้ไข ชื่อ/ที่อยู่ลูกค้า ----- >>>
         const customers = {
-            "WithADays": {
+            "moshi": {
                 name: "นางสาวกรรณ์ชลิกา  ฟังปรัชญากุล   ( เลขประจำตัวประชาชน 1200101732062)",
                 address: "114/255  หมู่ที่4  ต.ห้วยกะปิ  อ.เมืองชลบุรี จ.ชลบุรี"
             }
         };
         // <<<----- 4. แก้ไขค่าธรรมเนียม ----- >>>
         const paymentFeeRates = {
-	'promptpay': 0.00, 
-	'wechat': 0.00, 
+	'promptpay': 0.00,
+	'wechat': 0.00,
 	'truemoney': 0.00,
 	'alipay': 0.00,
 	'linepay': 0.00,
@@ -133,10 +133,10 @@
             return 0;
         }
         
-        let processedBranchData = [], processedProductData = [], processedPaymentData = [];
-        let rawDataFiltered = []; 
+        let processedBranchData = [], processedProductData = [], processedPaymentData = [], processedPriceData = [];
+        let rawDataFiltered = [];
         let printTestData = [];
-        let totalPrintTestQuantity = 0; 
+        let totalPrintTestQuantity = 0;
         let extractedSalesPeriod = '';
         
         const formatCurrency = (num) => num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -145,7 +145,7 @@
         document.getElementById('fileUpload').addEventListener('change', handleFile);
 
         function setupInitialHTML() {
-            document.getElementById('results-container').innerHTML = `<div class="summaries-wrapper"><div id="branch-summary-box" class="summary-box"></div><div id="product-summary-box" class="summary-box"></div><div id="payment-summary-box" class="summary-box"></div></div>`;
+            document.getElementById('results-container').innerHTML = `<div class="summaries-wrapper"><div id="branch-summary-box" class="summary-box"></div><div id="product-summary-box" class="summary-box"></div><div id="price-summary-box" class="summary-box"></div><div id="payment-summary-box" class="summary-box"></div></div>`;
             const exportContainer = document.getElementById('export-buttons-container');
             exportContainer.innerHTML = `
                 <button id="exportDashboardBtn" class="action-btn excel-btn">ดาวน์โหลด Dashboard (Excel)</button>
@@ -180,7 +180,7 @@
         setupInitialHTML();
 
         function processData(dataForSummary) {
-            const branchSummary = {}, productSummary = {}, paymentSummary = {};
+            const branchSummary = {}, productSummary = {}, paymentSummary = {}, priceSummary = {};
             const find = (row, keys) => { for (const key of keys) { if (row[key] !== undefined && row[key] !== null) return row[key]; } return ''; };
 
             dataForSummary.forEach(row => {
@@ -192,12 +192,12 @@
                 
                 if (branch) {
                     branchSummary[branch] = branchSummary[branch] || { totalQuantity: 0, totalAmount: 0 };
-                    branchSummary[branch].totalQuantity += quantity; 
+                    branchSummary[branch].totalQuantity += quantity;
                     branchSummary[branch].totalAmount += totalAmount;
                 }
                 if (product) {
                     productSummary[product] = productSummary[product] || { totalQuantity: 0, totalAmount: 0 };
-                    productSummary[product].totalQuantity += quantity; 
+                    productSummary[product].totalQuantity += quantity;
                     productSummary[product].totalAmount += totalAmount;
                 }
                 if (payment) {
@@ -205,11 +205,20 @@
                     paymentSummary[paymentKey] = paymentSummary[paymentKey] || { totalAmount: 0 };
                     paymentSummary[paymentKey].totalAmount += totalAmount;
                 }
+                 if (quantity > 0) {
+                    const unitPrice = (totalAmount / quantity).toFixed(2);
+                    priceSummary[unitPrice] = priceSummary[unitPrice] || { totalQuantity: 0, totalAmount: 0 };
+                    priceSummary[unitPrice].totalQuantity += quantity;
+                    priceSummary[unitPrice].totalAmount += totalAmount;
+                }
             });
 
             const thLocaleCompare = (a, b) => String(a).localeCompare(b, 'th');
             processedBranchData = Object.keys(branchSummary).map(key => ({ 'BranchName': key, 'จำนวนรวม': branchSummary[key].totalQuantity, 'ยอดขายรวม': branchSummary[key].totalAmount })).sort((a, b) => thLocaleCompare(a['BranchName'], b['BranchName']));
             processedProductData = Object.keys(productSummary).map(key => ({ 'สินค้า': key, 'จำนวนรวม': productSummary[key].totalQuantity, 'ยอดขายรวม': productSummary[key].totalAmount })).sort((a, b) => thLocaleCompare(a['สินค้า'], b['สินค้า']));
+            
+            processedPriceData = Object.keys(priceSummary).map(key => ({ 'ราคาขายต่อหน่วย': parseFloat(key), 'จำนวนรวม': priceSummary[key].totalQuantity, 'ยอดขายรวม': priceSummary[key].totalAmount })).sort((a, b) => a['ราคาขายต่อหน่วย'] - b['ราคาขายต่อหน่วย']);
+            
             processedPaymentData = Object.keys(paymentSummary).map(key => ({ 'ช่องทางชำระเงิน': key, 'ยอดรวม': paymentSummary[key].totalAmount }))
                 .sort((a, b) => thLocaleCompare(a['ช่องทางชำระเงิน'], b['ช่องทางชำระเงิน']))
                 .filter(p => p['ช่องทางชำระเงิน'].toLowerCase().trim() !== 'discfree');
@@ -240,13 +249,14 @@
             
             const branchTable = createPdfTable("ยอดขายแยกสาขา", processedBranchData, { 'BranchName': 'BranchName', 'QTY Sale': 'จำนวนรวม', 'Sale (บาท)': 'ยอดขายรวม' }, ['60%', '15%', '25%']);
             const itemTable = createPdfTable("ยอดขายแยก Item", processedProductData, { 'Item': 'สินค้า', 'QTY Sale': 'จำนวนรวม', 'Sale (บาท)': 'ยอดขายรวม' }, ['40%', '25%', '35%']);
+            const priceTable = createPdfTable("ยอดขายแยกตามราคา", processedPriceData, { 'ราคาขายต่อหน่วย': 'ราคาขายต่อหน่วย', 'QTY Sale': 'จำนวนรวม', 'Sale (บาท)': 'ยอดขายรวม' }, ['40%', '25%', '35%']);
             const paymentSummaryTable = createPaymentSummaryTableForPdf();
-            const printTestSummaryHtml = `<div class="summary-row" style="margin-top: 15px;"><span class="summary-label">จำนวนแผ่นปริ้นเทส</span><span class="summary-value">${formatNumber(totalPrintTestQuantity)} แผ่น</span></div>`;
+            const printTestSummaryHtml = totalPrintTestQuantity > 0 ? `<div class="summary-row" style="margin-top:-0.5cm; margin-bottom: 1cm;"><span class="summary-label" style="font-weight: normal;">จำนวนแผ่นปริ้นเทส</span><span class="summary-value">${formatNumber(totalPrintTestQuantity)} แผ่น</span></div>` : '';
             const financialSummary = calculateAndGenerateSummaryHTML();
             
             const mainContent = `<div style="display: flex; align-items: flex-start; gap: 1cm;">
                 <div style="width: 60%;">${branchTable}</div>
-                <div style="width: 40%;">${itemTable}${paymentSummaryTable}${printTestSummaryHtml}${financialSummary}</div>
+                <div style="width: 40%;">${itemTable}${priceTable}${printTestSummaryHtml}${paymentSummaryTable}${financialSummary}</div>
             </div>`;
 
             document.getElementById('invoice-paper').innerHTML = `<div class="invoice-header">${senderInfo}${invoiceMeta}</div>` + customerInfo + salesPeriod + mainContent;
@@ -321,16 +331,50 @@
 
                     const saleColumnNames = ['Sale (บาท)', 'ยอดรวม', 'ยอดขาย', 'Total', 'Amount'];
                     const branchColumnNames = ['BranchName', 'branch', 'สาขา'];
-                    const qtyColumnNames = ['QTY Sale', 'จำนวน']; 
+                    const qtyColumnNames = ['QTY Sale', 'จำนวน'];
+                    const discountColumnNames = ['Discount', 'discount', 'ส่วนลด'];
+                    const discountCodeColumnNames = ['Discount Code', 'discount code', 'โค้ดส่วนลด'];
                     const find = (row, keys) => { for (const key of keys) { if (row[key] !== undefined && row[key] !== null) return row[key]; } return ''; };
                     
-                    const positiveSalesData = rawJsonData.filter(row => {
+                    let expandedData = [];
+                    const saleKey = saleColumnNames.find(key => rawJsonData.length > 0 && rawJsonData[0][key] !== undefined);
+                    const qtyKey = qtyColumnNames.find(key => rawJsonData.length > 0 && rawJsonData[0][key] !== undefined);
+                    const discountKey = discountColumnNames.find(key => rawJsonData.length > 0 && rawJsonData[0][key] !== undefined);
+                    const discountCodeKey = discountCodeColumnNames.find(key => rawJsonData.length > 0 && rawJsonData[0][key] !== undefined);
+
+                    rawJsonData.forEach(row => {
+                        const totalAmount = parseFloat(find(row, saleColumnNames) || 0);
+                        const quantity = parseInt(find(row, qtyColumnNames) || 1, 10);
+                        
+                        if (totalAmount !== 0 && quantity > 1) {
+                            const discount = parseFloat(find(row, discountColumnNames) || 0);
+                            const pricePerSheet = (totalAmount + discount) / quantity;
+
+                            const firstRow = { ...row };
+                            if(qtyKey) firstRow[qtyKey] = 1;
+                            if(saleKey) firstRow[saleKey] = pricePerSheet - discount;
+                            expandedData.push(firstRow);
+
+                            for (let i = 1; i < quantity; i++) {
+                                const subsequentRow = { ...row };
+                                if(qtyKey) subsequentRow[qtyKey] = 1;
+                                if(saleKey) subsequentRow[saleKey] = pricePerSheet;
+                                if(discountKey) subsequentRow[discountKey] = 0;
+                                if(discountCodeKey) subsequentRow[discountCodeKey] = '';
+                                expandedData.push(subsequentRow);
+                            }
+                        } else {
+                            expandedData.push(row);
+                        }
+                    });
+
+                    const positiveSalesData = expandedData.filter(row => {
                         const totalAmount = parseFloat(find(row, saleColumnNames));
                         const branchName = find(row, branchColumnNames);
                         return !isNaN(totalAmount) && totalAmount > 0 && branchName;
                     });
 
-                    const zeroSalesData = rawJsonData.filter(row => {
+                    const zeroSalesData = expandedData.filter(row => {
                         const totalAmount = parseFloat(find(row, saleColumnNames));
                         const branchName = find(row, branchColumnNames);
                         return !isNaN(totalAmount) && totalAmount === 0 && branchName;
@@ -389,26 +433,56 @@
             const netTransferAmount = gpAmount - whtAmount;
             return `<div class="financial-summary"><div class="summary-row"><span class="summary-label">ยอดขายรวม</span><span class="summary-value">${formatCurrency(totalRev)} บาท</span></div><div class="summary-row"><span class="summary-label" style="color: red;">หัก ค่าธรรมเนียม XENDIT</span><span class="summary-value">${formatCurrency(totalXenditFee)} บาท</span></div><div class="summary-row summary-total"><span class="summary-label" style="color: blue;">ยอดขายสุทธิ</span><span class="summary-value">${formatCurrency(netSales)} บาท</span></div><div class="summary-row"><span class="summary-label">คิดเป็นส่วนแบ่ง GP ${gpRate * 100}% เท่ากับ</span><span class="summary-value">${formatCurrency(gpAmount)} บาท</span></div><div style="height: 15px;"></div><div class="summary-row"><span class="summary-label" style="color: blue;">ยอดก่อน VAT</span><span class="summary-value">${formatCurrency(preVatAmount)} บาท</span></div><div class="summary-row"><span class="summary-label" style="color: red;">Vat ${(vatRate * 100).toFixed(0)}%</span><span class="summary-value">${formatCurrency(vatAmount)} บาท</span></div><div class="summary-row"><span class="summary-label">คิดเป็นส่วนแบ่ง GP</span><span class="summary-value">${formatCurrency(gpAmount)} บาท</span></div><div class="summary-row"><span class="summary-label" style="color: red;">ภาษีหัก ณ ที่จ่าย ${whtRate * 100}%</span><span class="summary-value">${formatCurrency(whtAmount)} บาท</span></div><div class="summary-row summary-total"><span class="summary-label" style="color: blue;">ยอดโอนสุทธิ</span><span class="summary-value">${formatCurrency(netTransferAmount)} บาท</span></div></div><div class="invoice-footer"><p><strong>หมายเหตุ:</strong> หลังจากได้รับการโอนเงินแล้ว กรุณาส่งเอกสารใบเสร็จรับเงินพร้อมใบกำกับภาษีกลับมาให้บัญชี (ที่อยู่ตามใบยืนยันยอด) ขอบคุณค่ะ</p></div>`;
         }
-
+        
         function createPdfTable(title, data, columnMapping, colWidths = []) {
+            if (!data || data.length === 0) return '';
             const headers = Object.keys(columnMapping);
             let headerHtml = '<thead><tr>';
             headers.forEach((h, index) => { headerHtml += `<th style="${colWidths[index] ? `width: ${colWidths[index]};` : ''}">${h}</th>`; });
             headerHtml += '</tr></thead>';
-            let totalQty = 0, totalSale = 0;
+
+            const qtyDataKey = Object.values(columnMapping).find(key => key.toLowerCase().includes('จำนวน'));
+            const saleDataKey = Object.values(columnMapping).find(key => key.toLowerCase().includes('ยอดขาย') || key.toLowerCase().includes('ยอดรวม'));
+
+            let totalQty = 0;
+            let totalSale = 0;
+            
             let tableBody = '<tbody>';
             data.forEach(row => {
                 tableBody += `<tr>`;
                 headers.forEach(headerKey => {
-                    const value = row[columnMapping[headerKey]];
+                    const dataKey = columnMapping[headerKey];
+                    const value = row[dataKey];
                     const isNumeric = typeof value === 'number';
-                    tableBody += `<td style="text-align: ${isNumeric ? 'right' : 'left'};">${isNumeric ? (headerKey.includes('QTY') ? formatNumber(value) : formatCurrency(value)) : value}</td>`;
+                    
+                    let displayValue = value;
+                    if (isNumeric) {
+                        displayValue = dataKey.toLowerCase().includes('จำนวน') ? formatNumber(value) : formatCurrency(value);
+                    }
+                    
+                    let textAlign = isNumeric && headerKey !== 'ราคาขายต่อหน่วย' ? 'right' : 'left';
+                    tableBody += `<td style="text-align: ${textAlign};">${displayValue}</td>`;
                 });
                 tableBody += `</tr>`;
-                totalQty += row['จำนวนรวม'];
-                totalSale += row['ยอดขายรวม'];
+                
+                if (qtyDataKey && row[qtyDataKey]) totalQty += row[qtyDataKey];
+                if (saleDataKey && row[saleDataKey]) totalSale += row[saleDataKey];
             });
-            tableBody += `<tr style="font-weight: bold; background-color: #f2f2f2;"><td colspan="${headers.length - 2}" style="text-align: center;">รวม</td><td style="text-align: right;">${formatNumber(totalQty)}</td><td style="text-align: right;">${formatCurrency(totalSale)}</td></tr>`;
+
+            let footerHtml = `<tr style="font-weight: bold; background-color: #f2f2f2;">`;
+            if (qtyDataKey && saleDataKey) {
+                 footerHtml += `<td colspan="${headers.length - 2}" style="text-align: center;">รวม</td>`;
+                 footerHtml += `<td style="text-align: right;">${formatNumber(totalQty)}</td>`;
+                 footerHtml += `<td style="text-align: right;">${formatCurrency(totalSale)}</td>`;
+            } else if (saleDataKey) {
+                 footerHtml += `<td colspan="${headers.length - 1}" style="text-align: center;">รวม</td>`;
+                 footerHtml += `<td style="text-align: right;">${formatCurrency(totalSale)}</td>`;
+            } else {
+                 footerHtml += `<td colspan="${headers.length}">รวม</td>`;
+            }
+            footerHtml += `</tr>`;
+            
+            tableBody += footerHtml;
             tableBody += '</tbody>';
             return `<div class="pdf-table-container"><h3>${title}</h3><table class="pdf-table">${headerHtml}${tableBody}</table></div>`;
         }
@@ -416,8 +490,13 @@
         function displayDashboard() {
             document.getElementById('branch-summary-box').innerHTML = `<div class="summary-header"><h2>ตามสาขา</h2><div id="branch-stats" class="header-stats"></div></div><div class="table-container" id="branch-table"></div>`;
             document.getElementById('branch-table').innerHTML = createDashboardTable(processedBranchData, ['BranchName', 'จำนวนรวม', 'ยอดขายรวม']);
+            
             document.getElementById('product-summary-box').innerHTML = `<div class="summary-header"><h2>ตามสินค้า</h2><div id="product-stats" class="header-stats"></div></div><div class="table-container" id="product-table"></div>`;
             document.getElementById('product-table').innerHTML = createDashboardTable(processedProductData);
+            
+            document.getElementById('price-summary-box').innerHTML = `<div class="summary-header"><h2>ตามราคาขาย</h2><div id="price-stats" class="header-stats"></div></div><div class="table-container" id="price-table"></div>`;
+            document.getElementById('price-table').innerHTML = createDashboardTable(processedPriceData);
+            
             document.getElementById('payment-summary-box').innerHTML = `<div class="summary-header"><h2>ตามช่องทางชำระเงิน</h2><div id="payment-stats" class="header-stats"></div></div><div class="table-container" id="payment-table"></div>`;
             document.getElementById('payment-table').innerHTML = createDashboardTable(processedPaymentData);
             
@@ -427,17 +506,26 @@
             document.getElementById('branch-stats').innerHTML = `<div class="stat-item"><div class="stat-value">${formatNumber(processedBranchData.length)}</div><div class="stat-label">สาขา</div></div><div class="stat-item"><div class="stat-value">${formatNumber(totalQty)}</div><div class="stat-label">แผ่น</div></div><div class="stat-item"><div class="stat-value">${formatCurrency(totalRev)}</div><div class="stat-label">บาท</div></div>`;
             document.getElementById('product-stats').innerHTML = `<div class="stat-item"><div class="stat-value">${formatNumber(totalQty)}</div><div class="stat-label">แผ่น</div></div><div class="stat-item"><div class="stat-value">${formatCurrency(totalRev)}</div><div class="stat-label">บาท</div></div>`;
             
+            const priceTotalQty = processedPriceData.reduce((s, i) => s + i['จำนวนรวม'], 0);
+            const priceTotalRev = processedPriceData.reduce((s, i) => s + i['ยอดขายรวม'], 0);
+            document.getElementById('price-stats').innerHTML = `<div class="stat-item"><div class="stat-value">${formatNumber(processedPriceData.length)}</div><div class="stat-label">ราคา</div></div><div class="stat-item"><div class="stat-value">${formatNumber(priceTotalQty)}</div><div class="stat-label">แผ่น</div></div><div class="stat-item"><div class="stat-value">${formatCurrency(priceTotalRev)}</div><div class="stat-label">บาท</div></div>`;
+            
             const totalPayAmount = processedPaymentData.reduce((s, p) => s + p['ยอดรวม'], 0);
             document.getElementById('payment-stats').innerHTML = `<div class="stat-item"><div class="stat-value">${formatNumber(processedPaymentData.length)}</div><div class="stat-label">ช่องทาง</div></div><div class="stat-item"><div class="stat-value">${formatCurrency(totalPayAmount)}</div><div class="stat-label">บาท</div></div>`;
             
             const printTestDisplay = document.getElementById('print-test-display');
-            printTestDisplay.innerHTML = `จำนวนแผ่นปริ้นเทส (ยอด 0.00): <strong>${formatNumber(totalPrintTestQuantity)}</strong> แผ่น`;
-            printTestDisplay.classList.remove('hidden');
+            if (totalPrintTestQuantity > 0) {
+                printTestDisplay.innerHTML = `จำนวนแผ่นปริ้นเทส (ยอด 0.00): <strong>${formatNumber(totalPrintTestQuantity)}</strong> แผ่น`;
+                printTestDisplay.classList.remove('hidden');
+            } else {
+                printTestDisplay.classList.add('hidden');
+            }
 
             document.getElementById('results-container').classList.remove('hidden');
             document.getElementById('export-buttons-container').classList.remove('hidden');
             document.getElementById('pdf-preview-wrapper').classList.add('hidden');
         }
+
         function createDashboardTable(data, customHeaders = null) {
             if (data.length === 0) return '<p>ไม่พบข้อมูล</p>';
             const headers = customHeaders || Object.keys(data[0]);
@@ -461,10 +549,12 @@
             
             const branchExport = processedBranchData.map(r => ({'BranchName': r.BranchName, 'จำนวนรวม (แผ่น)': r['จำนวนรวม'], 'ยอดขายรวม (บาท)': r['ยอดขายรวม']}));
             const productExport = processedProductData.map(r => ({'สินค้า (Product)': r['สินค้า'], 'จำนวนรวม (แผ่น)': r['จำนวนรวม'], 'ยอดขายรวม (บาท)': r['ยอดขายรวม']}));
+            const priceExport = processedPriceData.map(r => ({ 'ราคาขายต่อหน่วย (บาท)': r['ราคาขายต่อหน่วย'], 'จำนวนรวม (แผ่น)': r['จำนวนรวม'], 'ยอดขายรวม (บาท)': r['ยอดขายรวม'] }));
             const paymentExport = processedPaymentData.map(r => ({'ช่องทางการชำระเงิน (Payment)': r['ช่องทางชำระเงิน'], 'ยอดรวม (บาท)': r['ยอดรวม']}));
             
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(branchExport), "สรุปตามสาขา");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(productExport), "สรุปตามสินค้า");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(priceExport), "สรุปตามราคาขาย");
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paymentExport), "สรุปตามช่องทางชำระเงิน");
 
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rawDataFiltered), "ข้อมูลดิบ (ยอด > 0)");
