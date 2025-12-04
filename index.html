@@ -269,11 +269,19 @@
             const invoiceElement = document.getElementById('invoice-paper');
             const exportBtn = document.getElementById('exportPngBtn');
             exportBtn.textContent = 'กำลังสร้าง PNG...'; exportBtn.disabled = true;
+            
+            // ดึงค่าจากฟอร์มเพื่อสร้างเลขเอกสาร
+            const invoiceDate = new Date(document.getElementById('invoiceDate').value);
+            const docSuffix = document.getElementById('docNumberSuffix').value.padStart(4, '0');
+            const docYear = invoiceDate.getFullYear();
+            const docNumber = `WAD${docYear}${docSuffix}`;
+            const fileName = `${docNumber}.png`;
+
             html2canvas(invoiceElement, { scale: 3, useCORS: true }).then(canvas => {
                 const imgData = canvas.toDataURL('image/png');
                 const link = document.createElement('a');
                 link.href = imgData;
-                link.download = `ใบยืนยันยอด_${new Date().toISOString().slice(0,10)}.png`;
+                link.download = fileName; // ตั้งชื่อไฟล์ตามเลขเอกสาร
                 link.click();
                 exportBtn.textContent = 'Export to PNG'; exportBtn.disabled = false;
             });
