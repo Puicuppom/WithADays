@@ -101,7 +101,7 @@
 
         // <<<----- 3. แก้ไข ชื่อ/ที่อยู่ลูกค้า ----- >>>
         const customers = {
-            "moshi": {
+            "withaday": {
                 name: "นางสาวกรรณ์ชลิกา  ฟังปรัชญากุล   ( เลขประจำตัวประชาชน 1200101732062)",
                 address: "114/255  หมู่ที่4  ต.ห้วยกะปิ  อ.เมืองชลบุรี จ.ชลบุรี"
             }
@@ -283,19 +283,33 @@
             const invoiceElement = document.getElementById('invoice-paper');
             const exportBtn = document.getElementById('exportPdfBtn');
             exportBtn.textContent = 'กำลังสร้าง PDF...'; exportBtn.disabled = true;
+            
+            const invoiceDate = new Date(document.getElementById('invoiceDate').value);
+            const docSuffix = document.getElementById('docNumberSuffix').value.padStart(4, '0');
+            const docYear = invoiceDate.getFullYear();
+            const docNumber = `WAD${docYear}${docSuffix}`;
+            const fileName = `${docNumber}.pdf`;
+
             html2canvas(invoiceElement, { scale: 3, useCORS: true }).then(canvas => {
                 const imgData = canvas.toDataURL('image/png');
                 const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-                const pdfWidth = pdf.internal.pageSize.getWidth(), pdfHeight = pdf.internal.pageSize.getHeight();
-                const canvasAspectRatio = canvas.width / canvas.height;
-                let finalImgWidth = pdfWidth, finalImgHeight = pdfWidth / canvasAspectRatio;
-                if (finalImgHeight > pdfHeight) {
-                    finalImgHeight = pdfHeight;
-                    finalImgWidth = finalImgHeight * canvasAspectRatio;
-                }
-                const xOffset = (pdfWidth - finalImgWidth) / 2;
-                pdf.addImage(imgData, 'PNG', xOffset, 0, finalImgWidth, finalImgHeight);
-                pdf.save(`ใบยืนยันยอด_${new Date().toISOString().slice(0,10)}.pdf`);
+                
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+                const canvasAspectRatio = canvasWidth / canvasHeight;
+
+                // **ส่วนที่แก้ไข**
+                // บังคับให้ความกว้างของรูปภาพพอดีกับความกว้างของ PDF เสมอ
+                const finalImgWidth = pdfWidth;
+                // แล้วคำนวณความสูงตามสัดส่วนเดิมเพื่อไม่ให้ภาพบิดเบี้ยว
+                const finalImgHeight = finalImgWidth / canvasAspectRatio;
+
+                // เพิ่มรูปภาพลงใน PDF โดยเริ่มจากขอบซ้ายบน (x=0, y=0)
+                pdf.addImage(imgData, 'PNG', 0, 0, finalImgWidth, finalImgHeight);
+                
+                pdf.save(fileName);
                 exportBtn.textContent = 'Export to PDF'; exportBtn.disabled = false;
             });
         }
